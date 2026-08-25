@@ -1,6 +1,6 @@
 # reviewer-pro
 
-A **god-mode Python code reviewer** custom agent for GitHub Copilot in VS Code. Goes far beyond syntax and linting — it traces every function end-to-end through its real execution pipeline to find the bugs that only show up in production.
+A **god-mode code reviewer** custom agent for GitHub Copilot in VS Code. Works with any programming language. Goes far beyond syntax and linting — it traces every function end-to-end through its real execution pipeline to find the bugs that only show up in production.
 
 ## What it does
 
