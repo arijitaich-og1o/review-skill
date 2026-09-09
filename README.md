@@ -1,6 +1,8 @@
 # reviewer-pro
 
-A **god-mode code reviewer** custom agent for GitHub Copilot in VS Code. Works with any programming language. Goes far beyond syntax and linting — it traces every function end-to-end through its real execution pipeline to find the bugs that only show up in production.
+A **god-mode code reviewer** custom agent for GitHub Copilot in VS Code. **Language-agnostic** — works on Python, JavaScript/TypeScript, Go, Java, C#, C/C++, Rust, Ruby, PHP, Kotlin, Swift, SQL, shell, and any other language. Goes far beyond syntax and linting — it traces every function end-to-end through its real execution pipeline to find the bugs that only show up in production.
+
+> It detects the language from your code and applies each review dimension using that language's own idioms, runtime, and failure modes. The examples below are illustrative, not Python-only.
 
 ## What it does
 
@@ -8,11 +10,11 @@ Seven review dimensions, every time:
 
 | Dimension | What it catches |
 |---|---|
-| **Runtime / pipeline failures** | Unhandled exceptions, `None` propagation, `KeyError`/`AttributeError` on real inputs, off-by-one, mutable defaults |
-| **Security & data integrity** | SQL/command injection, path traversal, `eval`/`pickle`/`yaml.load`, secrets in logs, TOCTOU races |
-| **Concurrency & race conditions** | Shared state without locks, check-then-act races, un-awaited `asyncio` tasks, deadlock ordering |
+| **Runtime / pipeline failures** | Unhandled exceptions or unchecked error returns, null/nil/undefined propagation, missing-key / out-of-bounds / nil-dereference on real inputs, off-by-one, integer overflow |
+| **Security & data integrity** | SQL/command/template injection, path traversal, unsafe deserialization (`pickle`, `unserialize`, `ObjectInputStream`), secrets in logs, TOCTOU races |
+| **Concurrency & race conditions** | Shared state without locks, check-then-act races, un-awaited tasks/goroutines/promises, deadlock ordering |
 | **Performance & scale** | O(n²) loops, N+1 queries, unbounded memory growth, missing pagination |
-| **Blocking calls** | `requests` inside `async def`, `time.sleep` in async code, blocking I/O on hot paths |
+| **Blocking calls** | Blocking I/O on async or latency-sensitive paths, sleeping on an event loop / UI thread, stalling `.join()`/`.await()`/`.get()` |
 | **Dead code** | Unreachable branches, always-true/false conditions, unused imports and parameters |
 | **Duplication** | Copy-pasted blocks that have drifted — where the copies have already diverged is often a real bug |
 
@@ -84,15 +86,19 @@ git clone https://github.com/arijitaich-og1o/review-skill.git
 ```
 
 ```
-@reviewer-pro deep review of auth.py
+@reviewer-pro deep review of auth.ts
 ```
+
+Works the same whether you hand it `auth.ts`, `handler.go`, `Service.java`, `payments.rb`, or a SQL migration.
 
 The agent activates automatically on phrases like "review this", "deep review", "god review", "what could fail", and "how do I harden this".
 
 ## Example output
 
+> Illustrative only — the agent produces the same report structure for any language.
+
 ```
-# GOD Code Review: auth.py
+# GOD Code Review: auth.ts
 
 **Verdict:** Not safe to ship — the session token is logged at DEBUG level and the
 password reset flow has a TOCTOU race that allows account takeover.
@@ -107,12 +113,12 @@ DB calls with no transaction, creating a replay window.
 
 ## 🔴 Critical
 ### [C1] Session token leaked to logs — `login()`, line ~42
-**Pipeline:** Token is created in `_mint_token()`, passed to `logger.debug()`
+**Pipeline:** Token is created in `mintToken()`, passed to the debug logger
 before being returned — any log aggregator (Datadog, Splunk, CloudWatch)
 stores it in plaintext.
-**Problem:** `logger.debug("token=%s", token)` logs the live session secret.
+**Problem:** `logger.debug("token=" + token)` logs the live session secret.
 **Trigger:** Any DEBUG-level logging in staging or production.
-**Fix:** Remove the log line, or log only the first 8 chars: `token[:8] + "…"`.
+**Fix:** Remove the log line, or log only a short prefix: `token.slice(0, 8) + "…"`.
 ...
 ```
 
